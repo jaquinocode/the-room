@@ -6,6 +6,7 @@ class Game:
         self.is_active = True
         self.total_rooms = 4
         self.curr_room_number = 1
+        # sample change for git
         # self.room_1 = Room1()
         self.action_synonyms = {
             "look": {
@@ -432,7 +433,8 @@ class Game:
             "are now in a completely different room."
         )
 
-class Room1():
+
+class Room1:
     def __init__(self):
         super().__init__()
         self.room_number = 1
