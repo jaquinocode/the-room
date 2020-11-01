@@ -1,6 +1,3 @@
-# from modules.room import Room1
-
-
 class Game:
     def __init__(self):
         self.is_active = True
@@ -258,89 +255,15 @@ class Game:
 
     def process_input(self, raw_input):
         # unintrusive cleansing & caps normalization
-        clean_input = raw_input.lower().strip()
+        cleaned_input = raw_input.lower().strip()
 
-        return self.curr_level.process_cleaned_input(clean_input)
-
-    def parse(self, raw_input):
-        user_input = raw_input.lower().strip()
-        # handle shortcut inputs as a priority
-        if user_input in {"l", "look", "look around"}:
-            return self.get_response("look", "room")
-        elif user_input in {"i", "inventory"}:
-            return self.get_inventory_text()
-
-        input_words = user_input.split()
-        action, thing = self.find_action_thing(input_words)
-        return self.get_response(action, thing)
-
-    def get_response(self, action, thing):
-        # if theres a game function for this input, do that, otherwise just get the
-        # text resource
-        try:
-            do_action = self.game_functions[thing][action]
-        except KeyError:
-            response = self.request_text(action, thing)
-        else:
-            response = do_action()
-        return response + "\n"
-
-    def request_text(self, action, thing):
-        INVALID_ACTION = f"You can't do that to the {thing}."
-
-        response = None
-        if action and thing:
-            response = self.room_things[thing].get(action, INVALID_ACTION)
-        elif not action and thing:
-            response = f"Not sure what you want to do to the {thing}."
-        elif action and not thing:
-            response = f"I can't do the '{action}' action on that."
-        elif not action and not thing:
-            response = (
-                "Couldn't identify any eligible action or object in your command.\nA "
-                "good command is something like:\nlook at desk"
-            )
-        return response
-
-    def find_action_thing(self, input_words):
-        action, thing = "", ""
-        action_Found, thing_Found = False, False
-
-        # iterating through words to check for a direct match with any actions and
-        # objects available or their synonyms
-        for word in input_words:
-            if not action_Found:
-                for action_key, synonyms in self.action_synonyms.items():
-                    if word == action_key or word in synonyms:
-                        action = action_key
-                        action_Found = True
-
-            if not thing_Found:
-                for thing_key, thing_properties in self.room_things.items():
-                    if word == thing_key or word in thing_properties["synonyms"]:
-                        thing = thing_key
-                        thing_Found = True
-
-        return action, thing
-
-    def get_inventory_text(self):
-        inventory_text = "Inventory:\n"
-        inventory_text += (
-            "\n".join(self.inventory.keys()) if self.inventory else "empty"
-        )
-        return inventory_text + "\n"
-
-    def go_to_next_room(self):
-        if self.curr_room_number < self.total_rooms:
-            self.curr_room_number += 1
-        self.room_things = self.all_things[f"room_{self.curr_room_number}"]
+        return self.curr_level.process_cleaned_input(cleaned_input)
 
 
 class Level_1:
     def __init__(self):
         self.action_synonyms = {
             "look": {
-                "l",
                 "look",
                 "look around",
                 "see",
@@ -365,9 +288,9 @@ class Level_1:
                 "find",
             },
             "pickup": {
+                "pickup",
                 "pick up",
                 "pick",
-                "pickup",
                 "take",
                 "grab",
                 "weild",
@@ -389,12 +312,12 @@ class Level_1:
                 "attack",
             },
             "open": {"open", "unlock", "enter"},
-            "help": {"h", "help"},
-            "exit": {"exit", "quit"},
+            "help": {"help", "h"},
+            "exit": {"exit", "quit"},  # TODO: replace exit w/ quit
             "read": {"read"},
             "draw": {"draw", "illustrate", "paint", "inscribe", "mark"},
             "place": {"place", "put", "set", "lie"},
-            "jump": {"bounce"},
+            "jump": {"jump", "bounce"},
         }
         self.things = {
             "room": {
@@ -453,20 +376,17 @@ class Level_1:
             },
         }
         self.functions = {
-            "phone": {
-                "pickup": self.pickup_phone,
-                "answer": self.answer_phone,
-            },
+            "phone": {"pickup": self.pickup_phone, "answer": self.answer_phone},
         }
         self.level_number = 1
         self.inventory = []
 
-    def process_cleaned_input(self, clean_input):
+    def process_cleaned_input(self, cleaned_input):
         # handle shortcut inputs as a priority
-        if clean_input in {"l", "look", "look around"}:
+        if cleaned_input in {"l", "look", "look around"}:
             return self.get_response("look", "room")
 
-        input_words = clean_input.split()
+        input_words = cleaned_input.split()
         action, thing = self.find_action_thing(input_words)
         return self.get_response(action, thing)
 
@@ -521,10 +441,20 @@ class Level_1:
 
     def go_to_next_room(self):
         # TODO: magic num
-        # TODO: this func should probably be passed from Game, so Game decides what to 
-        # do
+        # TODO: this func should probably be passed from Game, so Game decides what to
+        # do appropriately
+        self.inventory.clear()
         if self.level_number < 4:
             self.level_number += 1
+
+    """
+    def get_inventory_text(self):
+        inventory_text = "Inventory:\n"
+        inventory_text += (
+            "\n".join(self.inventory.keys()) if self.inventory else "empty"
+        )
+        return inventory_text + "\n"
+    """
 
     # this section has all the specific game actions that need to be expressed as
     # functions since they need to do things other than just give back the string
@@ -552,7 +482,6 @@ class Level_1:
 
     def answer_phone(self):
         self.go_to_next_room()
-        self.inventory.clear()
         return (
             "You answer it, the voice on the other line says 'You find yourself in "
             "a room.' As the voice speaks the room around you starts to shift. You "

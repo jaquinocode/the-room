@@ -2,8 +2,10 @@ from modules import text_game
 
 
 def main():
+    INTRO_TEXT = "You find yourself in a room."
+
     game = text_game.Game()
-    print("You find yourself in a room.")
+    print(INTRO_TEXT)
 
     while game.is_active:
         response = game.process_input(input())
