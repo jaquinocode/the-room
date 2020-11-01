@@ -4,68 +4,7 @@
 class Game:
     def __init__(self):
         self.is_active = True
-        self.total_rooms = 4
-        self.curr_room_number = 1
-        # sample change for git
-        # self.room_1 = Room1()
-        self.action_synonyms = {
-            "look": {
-                "l",
-                "look",
-                "look around",
-                "see",
-                "view",
-                "survey",
-                "observe",
-                "observe around",
-                "inspect",
-                "scrutinize",
-                "examine",
-                "investigate",
-                "check",
-                "checkout",
-                "review",
-                "monitor",
-                "search",
-                "watch",
-                "identify",
-                "analyze",
-                "peek",
-                "describe",
-                "find",
-            },
-            "pickup": {
-                "pick up",
-                "pick",
-                "pickup",
-                "take",
-                "grab",
-                "weild",
-                "hold",
-                "lift",
-            },
-            "approach": {"approach", "go", "goto", "reach", "walk"},
-            "answer": {"answer", "respond", "talk"},
-            "sleep": {"sleep", "rest"},
-            "hit": {
-                "hit",
-                "kick",
-                "smack",
-                "slap",
-                "punch",
-                "pound",
-                "fight",
-                "headbutt",
-                "attack",
-            },
-            "open": {"open", "unlock", "enter"},
-            "help": {"h", "help"},
-            "exit": {"exit", "quit"},
-            "read": {"read"},
-            "draw": {"draw", "illustrate", "paint", "inscribe", "mark"},
-            "place": {"place", "put", "set", "lie"},
-            "jump": {"bounce"},
-        }
+        self.curr_level = Level_1()
         self.all_things = {
             "room_1": {
                 "room": {
@@ -316,17 +255,12 @@ class Game:
                 },
             },
         }
-        self.room_things = self.all_things[f"room_{self.curr_room_number}"]
-        self.all_game_functions = {
-            "room_1": {
-                "phone": {
-                    "pickup": self.r1_pickup_phone,
-                    "answer": self.r1_answer_phone,
-                },
-            },
-        }
-        self.game_functions = self.all_game_functions[f"room_{self.curr_room_number}"]
-        self.inventory = {}
+
+    def process_input(self, raw_input):
+        # unintrusive cleansing & caps normalization
+        clean_input = raw_input.lower().strip()
+
+        return self.curr_level.process_cleaned_input(clean_input)
 
     def parse(self, raw_input):
         user_input = raw_input.lower().strip()
@@ -354,6 +288,7 @@ class Game:
     def request_text(self, action, thing):
         INVALID_ACTION = f"You can't do that to the {thing}."
 
+        response = None
         if action and thing:
             response = self.room_things[thing].get(action, INVALID_ACTION)
         elif not action and thing:
@@ -400,10 +335,201 @@ class Game:
             self.curr_room_number += 1
         self.room_things = self.all_things[f"room_{self.curr_room_number}"]
 
+
+class Level_1:
+    def __init__(self):
+        self.action_synonyms = {
+            "look": {
+                "l",
+                "look",
+                "look around",
+                "see",
+                "view",
+                "survey",
+                "observe",
+                "observe around",
+                "inspect",
+                "scrutinize",
+                "examine",
+                "investigate",
+                "check",
+                "checkout",
+                "review",
+                "monitor",
+                "search",
+                "watch",
+                "identify",
+                "analyze",
+                "peek",
+                "describe",
+                "find",
+            },
+            "pickup": {
+                "pick up",
+                "pick",
+                "pickup",
+                "take",
+                "grab",
+                "weild",
+                "hold",
+                "lift",
+            },
+            "approach": {"approach", "go", "goto", "reach", "walk"},
+            "answer": {"answer", "respond", "talk"},
+            "sleep": {"sleep", "rest"},
+            "hit": {
+                "hit",
+                "kick",
+                "smack",
+                "slap",
+                "punch",
+                "pound",
+                "fight",
+                "headbutt",
+                "attack",
+            },
+            "open": {"open", "unlock", "enter"},
+            "help": {"h", "help"},
+            "exit": {"exit", "quit"},
+            "read": {"read"},
+            "draw": {"draw", "illustrate", "paint", "inscribe", "mark"},
+            "place": {"place", "put", "set", "lie"},
+            "jump": {"bounce"},
+        }
+        self.things = {
+            "room": {
+                "look": (
+                    "You can see a bed and a desk with a phone resting on top. "
+                    "There's nothing else."
+                ),
+                "pickup": "Don't be ridiculous.",
+                "approach": "You're already in the room, man. No need.",
+                "hit": "You kick and hit around the room. Nothing happens.",
+                "synonyms": {
+                    "floor",
+                    "wall",
+                    "walls",
+                    "ceiling",
+                    "space",
+                    "area",
+                    "environment",
+                },
+            },
+            "phone": {
+                "look": "A small cheap phone. It appears to be ringing.",
+                "pickup": (
+                    "You have taken the phone. It is still ringing. Enter "
+                    "'i' or 'inventory' at any time to bring up your inventory."
+                ),
+                "approach": "You have approached the phone.",
+                "answer": (
+                    "You answer it, the voice on the other line says 'You find "
+                    "yourself in a room.' As the voice speaks, the room around you"
+                    " starts to shift. You are now in a completely different room."
+                ),
+                "hit": "You hit the phone. Nothing happens.",
+                "synonyms": {"device", "cellphone"},
+            },
+            "desk": {
+                "look": "A flimsy wooden desk.",
+                "pickup": (
+                    "Please. This desk is too heavy to pick up and take with you."
+                ),
+                "approach": "You have approached the desk.",
+                "hit": "You hit the desk. That was pointless.",
+                "synonyms": {"table"},
+            },
+            "bed": {
+                "look": "The bed you woke up from. Not sure how you got here.",
+                "pickup": "The bed's too big for that.",
+                "approach": "You have approached the bed.",
+                "sleep": "But you've just woke up. Get your head in the game, man!",
+                "hit": "You attack and hit the bed mercilessly. Nothing happens.",
+                "jump": (
+                    "You jump on the bed for a bit, smiling and having a grand 'ol "
+                    "time. Wow that was fun."
+                ),
+                "synonyms": {"mattress", "sheets", "pillow"},
+            },
+        }
+        self.functions = {
+            "phone": {
+                "pickup": self.pickup_phone,
+                "answer": self.answer_phone,
+            },
+        }
+        self.level_number = 1
+        self.inventory = []
+
+    def process_cleaned_input(self, clean_input):
+        # handle shortcut inputs as a priority
+        if clean_input in {"l", "look", "look around"}:
+            return self.get_response("look", "room")
+
+        input_words = clean_input.split()
+        action, thing = self.find_action_thing(input_words)
+        return self.get_response(action, thing)
+
+    def find_action_thing(self, input_words):
+        action, thing = "", ""
+        action_Found, thing_Found = False, False
+
+        # iterating through words to check for a direct match with any actions and
+        # objects available or their synonyms
+        for word in input_words:
+            if not action_Found:
+                for action_key, synonyms in self.action_synonyms.items():
+                    if word == action_key or word in synonyms:
+                        action = action_key
+                        action_Found = True
+
+            if not thing_Found:
+                for thing_key, thing_props in self.things.items():
+                    if word == thing_key or word in thing_props["synonyms"]:
+                        thing = thing_key
+                        thing_Found = True
+
+        return action, thing
+
+    def get_response(self, action, thing):
+        # if theres a game function for this input, do that, otherwise just get the
+        # text resource
+        try:
+            do_action = self.functions[thing][action]
+        except KeyError:
+            response = self.request_text(action, thing)
+        else:
+            response = do_action()
+        return response + "\n"
+
+    def request_text(self, action, thing_name):
+        INVALID_ACTION = f"You can't do that to the {thing_name}."
+
+        response = None
+        if action and thing_name:
+            response = self.things[thing_name].get(action, INVALID_ACTION)
+        elif not action and thing_name:
+            response = f"Not sure what you want to do to the {thing_name}."
+        elif action and not thing_name:
+            response = f"I can't do the '{action}' action on that."
+        elif not action and not thing_name:
+            response = (
+                "Couldn't identify any eligible action or object in your command.\nA "
+                "good command is something like:\nlook at desk"
+            )
+        return response
+
+    def go_to_next_room(self):
+        # TODO: magic num
+        # TODO: this func should probably be passed from Game, so Game decides what to 
+        # do
+        if self.level_number < 4:
+            self.level_number += 1
+
     # this section has all the specific game actions that need to be expressed as
     # functions since they need to do things other than just give back the string
     # resource to the player
-    def r1_pickup_phone(self):
+    def pickup_phone(self):
         if "phone" in self.inventory:
             return "You already have the phone."
 
@@ -424,7 +550,7 @@ class Game:
 
         return response
 
-    def r1_answer_phone(self):
+    def answer_phone(self):
         self.go_to_next_room()
         self.inventory.clear()
         return (
@@ -432,56 +558,3 @@ class Game:
             "a room.' As the voice speaks the room around you starts to shift. You "
             "are now in a completely different room."
         )
-
-
-class Room1:
-    def __init__(self):
-        super().__init__()
-        self.room_number = 1
-        self.room_things["room"]["look"] = (
-            "You can see a bed and a desk with a phone resting on top. There's nothing "
-            "else."
-        )
-        self.room_things.update(
-            {
-                "phone": {
-                    "look": "A small cheap phone. It appears to be ringing.",
-                    "pickup": (
-                        "You have taken the phone. It is still ringing. Enter 'i' or "
-                        "'inventory' at any time to bring up your inventory."
-                    ),
-                    "approach": "You have approached the phone.",
-                    "answer": (
-                        "You answer it, the voice on the other line says 'You find "
-                        "yourself in a room.' As the voice speaks the room around you "
-                        "starts to shift. You are now in a completely different room."
-                    ),
-                    "hit": "You hit the phone. Nothing happens.",
-                    "synonyms": {"device", "cellphone"},
-                },
-                "desk": {
-                    "look": "A flimsy wooden desk with a phone resting on it.",
-                    "pickup": (
-                        "Please. This desk is too heavy to pick up and take with you."
-                    ),
-                    "approach": "You have approached the desk.",
-                    "hit": "You hit the desk. That was pointless.",
-                    "synonyms": {"table"},
-                },
-                "bed": {
-                    "look": "The bed you woke up from. Not sure how you got here.",
-                    "pickup": "The bed's too big for that.",
-                    "approach": "You have approached the bed.",
-                    "sleep": "But you've just woke up. Get your head in the game, man!",
-                    "hit": "You attack and hit the bed mercilessly. Nothing happens.",
-                    "jump": (
-                        "You jump on the bed for a bit, smiling and having a grand 'ol "
-                        "time. Wow that was fun."
-                    ),
-                    "synonyms": {"mattress", "sheets", "pillow"},
-                },
-            }
-        )
-
-    def print_things(self):
-        print(self.room_things)

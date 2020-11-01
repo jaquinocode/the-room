@@ -6,7 +6,7 @@ def main():
     print("You find yourself in a room.")
 
     while game.is_active:
-        response = game.parse(input())
+        response = game.process_input(input())
         print(response)
 
 
