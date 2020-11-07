@@ -2,6 +2,7 @@ class Game:
     def __init__(self):
         self.is_active = True
         self.curr_level = Level_1()
+        """
         self.all_things = {
             "room_1": {
                 "room": {
@@ -252,6 +253,7 @@ class Game:
                 },
             },
         }
+        """
 
     def process_input(self, raw_input):
         # unintrusive cleansing & caps normalization
@@ -262,7 +264,29 @@ class Game:
 
 class Level_1:
     def __init__(self):
-        self.action_synonyms = {
+        self.LEVEL_NUMBER = 1
+        # things and actions should never be changed, if thing/action no longer exists
+        # then set that as one of its properties e.g. phone_exists: False
+        self.THINGS = {"room", "phone", "desk", "bed"}
+        self.ACTIONS = {
+            "look",
+            "pickup",
+            "approach",
+            "answer",
+            "sleep",
+            "hit",
+            "open",
+            "help",
+            "exit",
+            "read",
+            "draw",
+            "place",
+            "jump",
+        }
+        self.FUNCTIONS = {
+            "phone": {"pickup": self.pickup_phone, "answer": self.answer_phone},
+        }
+        self.SYNONYMS_FOR_ACTION = {
             "look": {
                 "look",
                 "look around",
@@ -291,6 +315,7 @@ class Level_1:
                 "pickup",
                 "pick up",
                 "pick",
+                "get",
                 "take",
                 "grab",
                 "weild",
@@ -299,7 +324,7 @@ class Level_1:
             },
             "approach": {"approach", "go", "goto", "reach", "walk"},
             "answer": {"answer", "respond", "talk"},
-            "sleep": {"sleep", "rest"},
+            "sleep": {"sleep", "rest", "nap"},
             "hit": {
                 "hit",
                 "kick",
@@ -319,7 +344,28 @@ class Level_1:
             "place": {"place", "put", "set", "lie"},
             "jump": {"jump", "bounce"},
         }
-        self.things = {
+        self.SYNONYMS_FOR_THING = {
+            "room": {
+                "room",
+                "floor",
+                "wall",
+                "walls",
+                "ceiling",
+                "space",
+                "area",
+                "environment",
+            },
+            "phone": {"phone", "device", "cellphone"},
+            "desk": {"desk", "table"},
+            "bed": {"bed", "mattress", "sheets", "pillow"},
+        }
+        # never delete a thing/action, just update
+        # TODO: have hit bed be function & have it say something different if you do it 
+        # twice
+        thing_props = {
+            "bed": {"hasBeenHit": False},
+        }
+        responses = {
             "room": {
                 "look": (
                     "You can see a bed and a desk with a phone resting on top. "
@@ -328,30 +374,17 @@ class Level_1:
                 "pickup": "Don't be ridiculous.",
                 "approach": "You're already in the room, man. No need.",
                 "hit": "You kick and hit around the room. Nothing happens.",
-                "synonyms": {
-                    "floor",
-                    "wall",
-                    "walls",
-                    "ceiling",
-                    "space",
-                    "area",
-                    "environment",
-                },
             },
             "phone": {
                 "look": "A small cheap phone. It appears to be ringing.",
-                "pickup": (
-                    "You have taken the phone. It is still ringing. Enter "
-                    "'i' or 'inventory' at any time to bring up your inventory."
-                ),
+                "pickup": "You have taken the phone. It is still ringing.",
                 "approach": "You have approached the phone.",
                 "answer": (
                     "You answer it, the voice on the other line says 'You find "
                     "yourself in a room.' As the voice speaks, the room around you"
                     " starts to shift. You are now in a completely different room."
                 ),
-                "hit": "You hit the phone. Nothing happens.",
-                "synonyms": {"device", "cellphone"},
+                "hit": "Why? Stop being so violent.",
             },
             "desk": {
                 "look": "A flimsy wooden desk.",
@@ -360,7 +393,6 @@ class Level_1:
                 ),
                 "approach": "You have approached the desk.",
                 "hit": "You hit the desk. That was pointless.",
-                "synonyms": {"table"},
             },
             "bed": {
                 "look": "The bed you woke up from. Not sure how you got here.",
@@ -372,118 +404,147 @@ class Level_1:
                     "You jump on the bed for a bit, smiling and having a grand 'ol "
                     "time. Wow that was fun."
                 ),
-                "synonyms": {"mattress", "sheets", "pillow"},
             },
         }
-        self.functions = {
-            "phone": {"pickup": self.pickup_phone, "answer": self.answer_phone},
+        inventory = set()
+        self.state = {
+            "thing_props": thing_props,
+            "responses": responses,
+            "inventory": inventory,
         }
-        self.level_number = 1
-        self.inventory = []
+
+        # all these dicts should include all things or actions
+        assert self.THINGS == set(self.state["responses"].keys())
+        assert self.THINGS == set(self.SYNONYMS_FOR_THING.keys())
+        assert self.ACTIONS == set(self.SYNONYMS_FOR_ACTION.keys())
 
     def process_cleaned_input(self, cleaned_input):
-        # handle shortcut inputs as a priority
-        if cleaned_input in {"l", "look", "look around"}:
-            return self.get_response("look", "room")
+        # quickly return response for look shortcuts
+        if cleaned_input in self.SYNONYMS_FOR_ACTION["look"] | {"l"}:
+            return self.process_command("look", "room")
 
+        # extracting verb and object out of input, then process verb object command
         input_words = cleaned_input.split()
-        action, thing = self.find_action_thing(input_words)
-        return self.get_response(action, thing)
+        action, thing = self.extract_action_and_thing(input_words)
+        return self.process_command(action, thing)
 
-    def find_action_thing(self, input_words):
+    def extract_action_and_thing(self, input_words):
         action, thing = "", ""
         action_Found, thing_Found = False, False
 
         # iterating through words to check for a direct match with any actions and
-        # objects available or their synonyms
-        for word in input_words:
+        # things available or their synonyms
+        for input_word in input_words:
             if not action_Found:
-                for action_key, synonyms in self.action_synonyms.items():
-                    if word == action_key or word in synonyms:
+                for action_key, synonyms in self.SYNONYMS_FOR_ACTION.items():
+                    if input_word in synonyms:
                         action = action_key
                         action_Found = True
 
             if not thing_Found:
-                for thing_key, thing_props in self.things.items():
-                    if word == thing_key or word in thing_props["synonyms"]:
+                for thing_key, synonyms in self.SYNONYMS_FOR_THING.items():
+                    if input_word in synonyms:
                         thing = thing_key
                         thing_Found = True
 
+        print(f"ACTION:", action)
+        print(f"THING:", thing)
         return action, thing
 
-    def get_response(self, action, thing):
+    def process_command(self, action, thing):
         # if theres a game function for this input, do that, otherwise just get the
         # text resource
         try:
-            do_action = self.functions[thing][action]
+            do_action = self.FUNCTIONS[thing][action]
         except KeyError:
-            response = self.request_text(action, thing)
+            return self.get_response_for_command(action, thing)
         else:
-            response = do_action()
-        return response + "\n"
+            return do_action()
 
-    def request_text(self, action, thing_name):
-        INVALID_ACTION = f"You can't do that to the {thing_name}."
+    # TODO: add below functionality
+    # nap >> I cant perform the "nap" action on nothing!
+    # nap on the unknown_object >> I cant perform the "nap" action on that.
+    # nap on phone >> I cant perform the "nap" action on the "phone" object. (maybe)
+    def get_response_for_command(self, action, thing):
+        INVALID_ACTION = f"You can't do that to the {thing}."
 
         response = None
-        if action and thing_name:
-            response = self.things[thing_name].get(action, INVALID_ACTION)
-        elif not action and thing_name:
-            response = f"Not sure what you want to do to the {thing_name}."
-        elif action and not thing_name:
+        if action and thing:
+            # being here assumes action & thing are recognized
+            # we dont need an invalid object option since recognized things will always
+            # exist in all our dicts but recognized actions might not. e.g. sleep on
+            # phone.
+            # yes, even if thing gets destroyed, itll still be in all our dicts
+            response = self.state["responses"][thing].get(action, INVALID_ACTION)
+        elif not action and thing:
+            response = f"Not sure what you want to do to the {thing}."
+        elif action and not thing:
             response = f"I can't do the '{action}' action on that."
-        elif not action and not thing_name:
+        elif not action and not thing:
             response = (
-                "Couldn't identify any eligible action or object in your command.\nA "
-                "good command is something like:\nlook at desk"
+                "Couldn't find an eligible verb or object in your command.\n"
+                "Example of a good command:\n"
+                "hit desk\n"
+                "Here, 'hit' is the verb and 'desk' is the object."
             )
-        return response
+        return response + "\n"
 
     def go_to_next_room(self):
         # TODO: magic num
         # TODO: this func should probably be passed from Game, so Game decides what to
         # do appropriately
-        self.inventory.clear()
+        self.state["inventory"].clear()
         if self.level_number < 4:
             self.level_number += 1
 
-    """
-    def get_inventory_text(self):
-        inventory_text = "Inventory:\n"
-        inventory_text += (
-            "\n".join(self.inventory.keys()) if self.inventory else "empty"
-        )
-        return inventory_text + "\n"
-    """
+    # // ----------------------------------
+    # SMART ACTIONS
+    # this section has all the specific game actions that need to do things other than
+    # just give back the string resource to the player
 
-    # this section has all the specific game actions that need to be expressed as
-    # functions since they need to do things other than just give back the string
-    # resource to the player
     def pickup_phone(self):
-        if "phone" in self.inventory:
-            return "You already have the phone."
+        # get our "render" (like in react) from our dict which should always contain
+        # the proper up-to-date render given the current state
+        # important that we get our render before running any state changes
+        response = self.get_response_for_command("pickup", "phone")
 
-        response = self.request_text("pickup", "phone")
-
+        # change our state given the action
+        # then change our responses dict so that it has all the right renders for the
+        # now different current state
         # move phone object to inventory
-        self.inventory["phone"] = self.room_things["phone"]
-        del self.room_things["phone"]
-        # remove no longer required entries
-        del self.inventory["phone"]["pickup"]
-        del self.inventory["phone"]["approach"]
-        # update environment description
-        self.room_things["room"][
-            "look"
-        ] = "You can see a bed and a desk. There's nothing else."
-        # picking up phone function no longer needed
-        del self.game_functions["phone"]["pickup"]
+        if "phone" not in self.state["inventory"]:
+            # phone not picked up yet, do the state changes
+            # change non-responses
+            self.state["inventory"].add("phone")
+            # change responses
+            # room changes
+            self.state["responses"]["room"][
+                "look"
+            ] = "You can see a bed and a desk. There's nothing else."
+            # phone changes
+            self.state["responses"]["phone"][
+                "look"
+            ] = "A small cheap phone. It is ringing. Now that it is on your person, you can feel an unexplainable force emanating from it."
+            self.state["responses"]["phone"][
+                "pickup"
+            ] = "You already have the phone!"
+            self.state["responses"]["phone"][
+                "approach"
+            ] = "You can't approach something that's already on your person!"
 
+        # we already had our proper render prepared, now that the state and responses
+        # has been properly changed for any future commands and get_response's, we can
+        # finish our function
         return response
 
     def answer_phone(self):
-        self.go_to_next_room()
-        return (
-            "You answer it, the voice on the other line says 'You find yourself in "
-            "a room.' As the voice speaks the room around you starts to shift. You "
-            "are now in a completely different room."
-        )
+        # get response and save that
+        response = self.get_response_for_command("answer", "phone")
+
+        # do the state change stuff so that our renders and shit are prepared
+        # for now do nothing, I assume we would have to call a func ref passed down 
+        # from Game object that would do the switch
+        # self.go_to_next_room()
+
+        # return that saved response
+        return response
