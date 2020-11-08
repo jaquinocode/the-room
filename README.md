@@ -7,11 +7,6 @@
 
 <br/>
 
-
->(Note: Spoilers below! Takes ~15 minutes to complete if you've never seen the puzzles before but obviously not if you see the spoilers.)
-
-<br/>
-
 ![demo1](https://i.imgur.com/iL0qSGp.gif)
 _Showing the basics of how the game works. Note that unknown actions on objects returns a smart error that implies the game is indeed aware of your intentions but can't enact them._
 
