@@ -1,7 +1,7 @@
 class Game:
     def __init__(self):
         self.is_active = True
-        self.LEVEL_CLASSES = [Level_1, Level_2, Last_Level]
+        self.LEVEL_CLASSES = [Level_1, Level_2, Level_3]
         self.curr_level_index = 0
         self.curr_level = self.LEVEL_CLASSES[self.curr_level_index](
             self.go_to_next_level
@@ -574,13 +574,13 @@ class Level_2:
         return response
 
 
-class Last_Level:
+class Level_3:
     def __init__(self, end_game):
         self.end_game = end_game
-        self.LEVEL_NUMBER = 2
+        self.LEVEL_NUMBER = 3
         # things and actions should never be changed, if thing/action no longer exists
         # then set that as one of its properties e.g. phone_exists: False
-        self.THINGS = {"room", "chalk", "note", "door"}
+        self.THINGS = {"room", "wall", "table", "rack", "clock", "cube"}
         self.ACTIONS = {
             "look",
             "pickup",
@@ -655,67 +655,84 @@ class Last_Level:
             "jump": {"jump", "bounce"},
         }
         self.SYNONYMS_FOR_THING = {
-            "room": {
-                "room",
-                "floor",
+            "room": {"room", "floor", "ceiling", "space", "area", "environment"},
+            "wall": {
                 "wall",
                 "walls",
-                "ceiling",
-                "space",
-                "area",
-                "environment",
-            },
-            "chalk": {"chalk", "chalks", "chlak"},
-            "note": {
-                "note",
-                "paper",
-                "message",
+                "marks",
+                "markings",
                 "writing",
                 "writings",
-                "markings",
-                "marks",
-                "sticky",
+                "drawing",
+                "drawings",
+                "symbol",
+                "hint",
+                "numbers",
             },
-            "door": {"door", "gate"},
+            "table": {"table", "desk"},
+            "rack": {"rack", "triangle"},
+            "clock": {"clock", "circle", "circular"},
+            "cube": {"cube", "rubix", "square"},
         }
-        self.FUNCTIONS = {
-            "chalk": {"pickup": self.pickup_chalk},
-            "door": {"draw": self.draw_door, "open": self.open_door},
-        }
+        self.FUNCTIONS = {}
         # never delete a thing/action, just update
-        thing_props = {"door": {"exists": False}}
+        thing_props = {}
         responses = {
             "room": {
                 "look": (
-                    "Except for a piece of chalk you see rested on the center of "
-                    "the floor, this room is completely bare."
+                    "The north wall that's facing me has some strange "
+                    "writings/marks on it. There is a billiards table in the center "
+                    "of the room in front of you. There is a clock hanging on the same "
+                    "wall. There is a rubix cube lying on the floor."
                 ),
                 "pickup": "Don't be ridiculous.",
                 "approach": "You're already in the room, man. No need.",
             },
-            "chalk": {
+            "wall": {
                 "look": (
-                    "A normal piece of chalk. There is a sticky note attached to it."
+                    "You see a clock hanging on the wall. Below that are some markings:"
+                    "\n3 -> 1 -> 4"
                 ),
-                "pickup": "You have picked up the chalk.",
-                "approach": "You have approached the chalk.",
+                "pickup": "Don't be ridiculous.",
+                "approach": "You have approached the wall.",
+                "hit": "You hit the wall. Completely useless.",
+                "read": "3 -> 1 -> 4",
             },
-            "note": {
+            "table": {
                 "look": (
-                    "A sticky note with a message written on it:\nYOU'VE FOUND THE "
-                    "KEY. NOW FIND THE DOOR."
+                    "An old no longer working billiards table. There is a triangle rack"
+                    " on it. It would probably be an ideal location to PLACE objects "
+                    "onto this table."
                 ),
-                "approach": "You have approached the note.",
-                "read": "YOU'VE FOUND THE KEY. NOW FIND THE DOOR.",
+                "pickup": "Don't be silly.",
+                "approach": "You have approached the table.",
             },
-            "door": {
-                "look": (
-                    "You try to look for a door, but alas. There is none to be found."
+            "rack": {
+                "look": "A large triangle rack used to play pool.",
+                "pickup": "You picked up the large triangle rack.",
+                "approach": "You have approached the large triangle rack.",
+                "place": (
+                    "You need to have the rack on your person if you want to place it."
                 ),
-                "pickup": "Even if there was a door, that's quite silly.",
-                "approach": "There is no door to approach.",
-                "draw": "Can't draw a door without a writing utensil.",
-                "open": "You can't open a non-existent door.",
+            },
+            "clock": {
+                "look": "A medium-sized circular clock.",
+                "pickup": "You picked up the medium-sized clock.",
+                "approach": "You have approached the clock.",
+                "place": (
+                    "You need to have the clock on your person if you want to place it."
+                ),
+            },
+            "cube": {
+                "look": (
+                    "A small rubix cube. Unfortunately doesn't work anymore and "
+                    "might as well be a paperweight."
+                ),
+                "pickup": "You picked up the small rubix cube.",
+                "approach": "You have approached the small rubix cube.",
+                "place": (
+                    "You need to have the cube on your person if you want to place it."
+                ),
             },
         }
         inventory = set()
@@ -797,60 +814,3 @@ class Last_Level:
     # this section has all the specific game actions that need to do things other than
     # just give back the string resource to the player
 
-    def pickup_chalk(self):
-        response = self.get_response_for_command("pickup", "chalk")
-
-        responses, inventory = (self.state[k] for k in ("responses", "inventory"))
-        if "chalk" not in inventory:
-            inventory.add("chalk")
-
-            # room
-            responses["room"]["look"] = "The room is completely bare."
-            # chalk
-            responses["chalk"]["pickup"] = "You already have the chalk!"
-            responses["chalk"][
-                "approach"
-            ] = "No need to approach the chalk since you have it already."
-            # note
-            responses["note"][
-                "approach"
-            ] = "No need to approach the note since you have it already."
-            # door
-            responses["door"]["draw"] = "You draw the door."
-
-        return response
-
-    def draw_door(self):
-        response = self.get_response_for_command("draw", "door")
-
-        thing_props, responses, inventory = (
-            self.state[k] for k in ("thing_props", "responses", "inventory")
-        )
-        if not thing_props["door"]["exists"] and "chalk" in inventory:
-            thing_props["door"]["exists"] = True
-
-            # room
-            responses["room"][
-                "look"
-            ] = "The room is completely bare, except for a crudely drawn chalk door."
-            # door
-            responses["door"][
-                "look"
-            ] = "A badly drawn, human-sized door drawn with chalk."
-            responses["door"]["pickup"] = "You can't do that to the door silly."
-            responses["door"]["approach"] = "You approach the door."
-            responses["door"]["draw"] = "You've already drawn the door!"
-            responses["door"][
-                "open"
-            ] = "You try to open the door and somehow it works? You enter and are now in a completely different room."
-
-        return response
-
-    def open_door(self):
-        response = self.get_response_for_command("open", "door")
-
-        thing_props = self.state["thing_props"]
-        if thing_props["door"]["exists"]:
-            self.end_game()
-
-        return response
