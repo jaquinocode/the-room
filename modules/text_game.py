@@ -210,8 +210,8 @@ class Level_1:
                         thing = thing_key
                         thing_Found = True
 
-        print(f"ACTION:", action)
-        print(f"THING:", thing)
+        # print(f"ACTION:", action)
+        # print(f"THING:", thing)
         return action, thing
 
     def process_command(self, action, thing):
@@ -477,8 +477,8 @@ class Level_2:
                         thing = thing_key
                         thing_Found = True
 
-        print(f"ACTION:", action)
-        print(f"THING:", thing)
+        # print(f"ACTION:", action)
+        # print(f"THING:", thing)
         return action, thing
 
     def process_command(self, action, thing):
@@ -776,8 +776,8 @@ class Level_3:
                         thing = thing_key
                         thing_Found = True
 
-        print(f"ACTION:", action)
-        print(f"THING:", thing)
+        # print(f"ACTION:", action)
+        # print(f"THING:", thing)
         return action, thing
 
     def process_command(self, action, thing):
